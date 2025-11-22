@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>BLM PLSS Vector Tiles Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 300px;
+            z-index: 1;
+        }
+        
+        .info-panel h2 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .info-panel p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+        
+        .legend h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 3px;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+        
+        .url-info {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="info-panel">
+    <h2>BLM PLSS Vector Tiles</h2>
+    <p><strong>Public Land Survey System</strong></p>
+    <p>Bureau of Land Management cadastral data served as vector tiles.</p>
+    <div class="url-info" id="tile-url">
+        Replace TILE_URL with your CloudFront domain
+    </div>
+</div>
+
+<div class="legend">
+    <h3>Layers</h3>
+    <div class="legend-item">
+        <div class="legend-color" style="background: #000000; height: 4px;"></div>
+        <span>State Boundaries</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background: #0066cc;"></div>
+        <span>PLSS Township</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background: #00cc66;"></div>
+        <span>PLSS Section</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background: #cc6600;"></div>
+        <span>PLSS Intersected</span>
+    </div>
+</div>
+
+<script>
+    // Replace this with your CloudFront domain from terraform output
+    const TILE_URL = 'REPLACE_WITH_YOUR_CLOUDFRONT_DOMAIN';
+    
+    // Display the tile URL
+    document.getElementById('tile-url').textContent = TILE_URL + '/{z}/{x}/{y}.pbf';
+    
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: {
+            version: 8,
+            sources: {
+                'carto-light': {
+                    type: 'raster',
+                    tiles: [
+                        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                    ],
+                    tileSize: 256,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                },
+                'plss': {
+                    type: 'vector',
+                    tiles: [TILE_URL + '/{z}/{x}/{y}.pbf'],
+                    minzoom: 0,
+                    maxzoom: 14
+                }
+            },
+            layers: [
+                {
+                    'id': 'background',
+                    'type': 'raster',
+                    'source': 'carto-light'
+                },
+                {
+                    'id': 'state-boundaries-fill',
+                    'type': 'fill',
+                    'source': 'plss',
+                    'source-layer': 'state_boundaries',
+                    'paint': {
+                        'fill-color': '#000000',
+                        'fill-opacity': 0.05
+                    }
+                },
+                {
+                    'id': 'state-boundaries',
+                    'type': 'line',
+                    'source': 'plss',
+                    'source-layer': 'state_boundaries',
+                    'paint': {
+                        'line-color': '#000000',
+                        'line-width': 2
+                    }
+                },
+                {
+                    'id': 'townships-fill',
+                    'type': 'fill',
+                    'source': 'plss',
+                    'source-layer': 'plss_township',
+                    'minzoom': 6,
+                    'paint': {
+                        'fill-color': '#0066cc',
+                        'fill-opacity': 0.03
+                    }
+                },
+                {
+                    'id': 'townships',
+                    'type': 'line',
+                    'source': 'plss',
+                    'source-layer': 'plss_township',
+                    'minzoom': 6,
+                    'paint': {
+                        'line-color': '#0066cc',
+                        'line-width': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            6, 0.5,
+                            10, 1,
+                            14, 2
+                        ]
+                    }
+                },
+                {
+                    'id': 'sections-fill',
+                    'type': 'fill',
+                    'source': 'plss',
+                    'source-layer': 'plss_section',
+                    'minzoom': 9,
+                    'paint': {
+                        'fill-color': '#00cc66',
+                        'fill-opacity': 0.02
+                    }
+                },
+                {
+                    'id': 'sections',
+                    'type': 'line',
+                    'source': 'plss',
+                    'source-layer': 'plss_section',
+                    'minzoom': 9,
+                    'paint': {
+                        'line-color': '#00cc66',
+                        'line-width': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            9, 0.3,
+                            12, 0.5,
+                            14, 1
+                        ]
+                    }
+                },
+                {
+                    'id': 'intersected-fill',
+                    'type': 'fill',
+                    'source': 'plss',
+                    'source-layer': 'plss_intersected',
+                    'minzoom': 10,
+                    'paint': {
+                        'fill-color': '#cc6600',
+                        'fill-opacity': 0.05
+                    }
+                },
+                {
+                    'id': 'intersected',
+                    'type': 'line',
+                    'source': 'plss',
+                    'source-layer': 'plss_intersected',
+                    'minzoom': 10,
+                    'paint': {
+                        'line-color': '#cc6600',
+                        'line-width': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            10, 0.3,
+                            14, 1
+                        ],
+                        'line-dasharray': [2, 2]
+                    }
+                }
+            ]
+        },
+        center: [-98.5795, 39.8283],
+        zoom: 4
+    });
+    
+    // Add navigation controls
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    
+    // Add click handler to show feature properties
+    map.on('click', function(e) {
+        const features = map.queryRenderedFeatures(e.point, {
+            layers: ['state-boundaries', 'townships', 'sections', 'intersected']
+        });
+        
+        if (features.length > 0) {
+            const feature = features[0];
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(`
+                    <strong>${feature.layer.id}</strong><br>
+                    ${Object.entries(feature.properties)
+                        .slice(0, 5)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join('<br>')}
+                `)
+                .addTo(map);
+        }
+    });
+    
+    // Change cursor on hover
+    map.on('mouseenter', ['state-boundaries', 'townships', 'sections', 'intersected'], function() {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    
+    map.on('mouseleave', ['state-boundaries', 'townships', 'sections', 'intersected'], function() {
+        map.getCanvas().style.cursor = '';
+    });
+</script>
+
+</body>
+</html>
