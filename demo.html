@@ -96,7 +96,7 @@
     <p><strong>Public Land Survey System</strong></p>
     <p>Bureau of Land Management cadastral data served as vector tiles.</p>
     <div class="url-info" id="tile-url">
-        Replace TILE_URL with your CloudFront domain
+        Loading...
     </div>
 </div>
 
@@ -121,10 +121,10 @@
 </div>
 
 <script>
-    // CloudFront vector tile URL template & metadata endpoint
-    const TILE_URL_TEMPLATE = 'https://d38r6gz80i2tvd.cloudfront.net/{z}/{x}/{y}.pbf';
-    const METADATA_URL = 'https://d38r6gz80i2tvd.cloudfront.net/metadata.json';
-    document.getElementById('tile-url').textContent = TILE_URL_TEMPLATE;
+    // Tileserver URL
+    const TILESERVER_URL = 'http://blm-plss-tiles-alb-562159201.us-east-1.elb.amazonaws.com';
+    const TILES_URL = TILESERVER_URL + '/styles/blm-plss-cadastral/{z}/{x}/{y}.pbf';
+    document.getElementById('tile-url').textContent = TILES_URL;
     
     const map = new maplibregl.Map({
         container: 'map',
@@ -141,7 +141,7 @@
                 },
                 'plss': {
                     type: 'vector',
-                    tiles: [TILE_URL_TEMPLATE],
+                    tiles: [TILES_URL],
                     minzoom: 0,
                     maxzoom: 14
                 }
@@ -297,18 +297,6 @@
     map.on('mouseleave', ['state-boundaries', 'townships', 'sections', 'intersected'], function() {
         map.getCanvas().style.cursor = '';
     });
-
-    // Optional: load metadata.json for diagnostics
-    fetch(METADATA_URL)
-        .then(r => r.ok ? r.json() : null)
-        .then(meta => {
-            if (meta && meta.vector_layers) {
-                console.log('Vector layers from metadata.json:', meta.vector_layers.map(l => l.id));
-            } else {
-                console.log('metadata.json not available or missing vector_layers');
-            }
-        })
-        .catch(err => console.warn('Failed to fetch metadata.json:', err));
 </script>
 
 </body>
