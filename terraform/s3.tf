@@ -20,15 +20,8 @@ resource "aws_s3_bucket_versioning" "mbtiles" {
   }
 }
 
-# Upload MBTiles file to S3
-resource "aws_s3_object" "mbtiles" {
-  bucket = aws_s3_bucket.mbtiles.id
-  key    = "blm-plss-cadastral.mbtiles"
-  source = var.mbtiles_file
-  etag   = filemd5(var.mbtiles_file)
-  
-  content_type = "application/vnd.mapbox-vector-tile"
-}
+# MBTiles will be uploaded by ECS task
+# Not uploading from local to avoid long wait times
 
 # Data source for current AWS account
 data "aws_caller_identity" "current" {}

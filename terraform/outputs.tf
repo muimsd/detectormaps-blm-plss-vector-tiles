@@ -32,3 +32,13 @@ output "metadata_url" {
   description = "TileJSON metadata URL"
   value       = "https://${aws_cloudfront_distribution.tiles.domain_name}/metadata.json"
 }
+
+output "tileserver_url" {
+  description = "TileServer ALB URL"
+  value       = "http://${aws_lb.tileserver.dns_name}"
+}
+
+output "tileserver_ecr_url" {
+  description = "TileServer ECR repository URL"
+  value       = aws_ecr_repository.tileserver.repository_url
+}

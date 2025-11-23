@@ -19,12 +19,12 @@ resource "aws_cloudfront_distribution" "tiles" {
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
     target_origin_id = "lambda-tile-server"
 
     forwarded_values {
       query_string = false
-      headers      = []
+      headers      = ["Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"]
 
       cookies {
         forward = "none"
@@ -42,12 +42,12 @@ resource "aws_cloudfront_distribution" "tiles" {
   ordered_cache_behavior {
     path_pattern     = "metadata.json"
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
     target_origin_id = "lambda-tile-server"
 
     forwarded_values {
       query_string = false
-      headers      = []
+      headers      = ["Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"]
 
       cookies {
         forward = "none"

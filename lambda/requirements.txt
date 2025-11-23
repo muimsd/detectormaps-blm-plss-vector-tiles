@@ -1,1 +1,2 @@
-boto3==1.34.144
+boto3
+sqlite-s3-query==1.34.144

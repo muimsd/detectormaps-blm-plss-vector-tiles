@@ -43,6 +43,26 @@ resource "aws_iam_role_policy" "lambda_policy" {
           aws_s3_bucket.mbtiles.arn,
           "${aws_s3_bucket.mbtiles.arn}/*"
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface",
+          "ec2:AssignPrivateIpAddresses",
+          "ec2:UnassignPrivateIpAddresses"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticfilesystem:ClientMount",
+          "elasticfilesystem:ClientWrite",
+          "elasticfilesystem:ClientRootAccess"
+        ]
+        Resource = aws_efs_file_system.mbtiles.arn
       }
     ]
   })
@@ -66,12 +86,30 @@ resource "aws_lambda_function" "tile_server" {
   memory_size     = var.lambda_memory_size
   timeout         = var.lambda_timeout
 
+  # VPC Configuration for EFS access
+  vpc_config {
+    subnet_ids         = [aws_default_subnet.default_az1.id, aws_default_subnet.default_az2.id]
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  # EFS File System Configuration
+  file_system_config {
+    arn              = aws_efs_access_point.lambda_mbtiles.arn
+    local_mount_path = "/mnt/efs"
+  }
+
   environment {
     variables = {
+      MBTILES_PATH   = "/mnt/efs/blm-plss-cadastral.mbtiles"
       MBTILES_BUCKET = aws_s3_bucket.mbtiles.id
-      MBTILES_KEY    = aws_s3_object.mbtiles.key
+      MBTILES_KEY    = "blm-plss-cadastral.mbtiles"
     }
   }
+
+  depends_on = [
+    aws_efs_mount_target.mbtiles_az1,
+    aws_efs_mount_target.mbtiles_az2
+  ]
 }
 
 # CloudWatch Log Group

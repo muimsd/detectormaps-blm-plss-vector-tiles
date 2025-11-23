@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <title>BLM PLSS Vector Tiles Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
-    <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
         body {
             margin: 0;
@@ -121,13 +121,12 @@
 </div>
 
 <script>
-    // Replace this with your CloudFront domain from terraform output
-    const TILE_URL = 'REPLACE_WITH_YOUR_CLOUDFRONT_DOMAIN';
+    // CloudFront vector tile URL template & metadata endpoint
+    const TILE_URL_TEMPLATE = 'https://d38r6gz80i2tvd.cloudfront.net/{z}/{x}/{y}.pbf';
+    const METADATA_URL = 'https://d38r6gz80i2tvd.cloudfront.net/metadata.json';
+    document.getElementById('tile-url').textContent = TILE_URL_TEMPLATE;
     
-    // Display the tile URL
-    document.getElementById('tile-url').textContent = TILE_URL + '/{z}/{x}/{y}.pbf';
-    
-    const map = new mapboxgl.Map({
+    const map = new maplibregl.Map({
         container: 'map',
         style: {
             version: 8,
@@ -142,7 +141,7 @@
                 },
                 'plss': {
                     type: 'vector',
-                    tiles: [TILE_URL + '/{z}/{x}/{y}.pbf'],
+                    tiles: [TILE_URL_TEMPLATE],
                     minzoom: 0,
                     maxzoom: 14
                 }
@@ -267,7 +266,7 @@
     });
     
     // Add navigation controls
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
     
     // Add click handler to show feature properties
     map.on('click', function(e) {
@@ -277,7 +276,7 @@
         
         if (features.length > 0) {
             const feature = features[0];
-            new mapboxgl.Popup()
+            new maplibregl.Popup()
                 .setLngLat(e.lngLat)
                 .setHTML(`
                     <strong>${feature.layer.id}</strong><br>
@@ -298,6 +297,18 @@
     map.on('mouseleave', ['state-boundaries', 'townships', 'sections', 'intersected'], function() {
         map.getCanvas().style.cursor = '';
     });
+
+    // Optional: load metadata.json for diagnostics
+    fetch(METADATA_URL)
+        .then(r => r.ok ? r.json() : null)
+        .then(meta => {
+            if (meta && meta.vector_layers) {
+                console.log('Vector layers from metadata.json:', meta.vector_layers.map(l => l.id));
+            } else {
+                console.log('metadata.json not available or missing vector_layers');
+            }
+        })
+        .catch(err => console.warn('Failed to fetch metadata.json:', err));
 </script>
 
 </body>

@@ -25,16 +25,47 @@ DATA_DIR = Path("data")
 OUTPUT_FILE = "blm-plss-cadastral.mbtiles"
 
 
+def get_layer_max_record_count(layer_id):
+    """Get the maxRecordCount from the layer metadata."""
+    url = f"{BASE_URL}/{layer_id}"
+    params = {'f': 'json'}
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        metadata = response.json()
+        max_count = metadata.get('maxRecordCount', 1000)
+        print(f"  Layer {layer_id} maxRecordCount: {max_count}")
+        return max_count
+    except Exception as e:
+        print(f"  Warning: Could not fetch maxRecordCount, using default 1000. Error: {e}")
+        return 1000
+
+
 def download_geojson(layer_id, output_file):
     """Download GeoJSON for a specific layer from the MapServer."""
     print(f"Downloading layer {layer_id}: {LAYERS[layer_id]['name']}...")
     
+    # Check if file already exists and is complete
+    if output_file.exists():
+        try:
+            with open(output_file, 'r') as f:
+                existing_data = json.load(f)
+                feature_count = len(existing_data.get('features', []))
+                if feature_count > 0:
+                    print(f"  Layer already downloaded with {feature_count} features, skipping...")
+                    return feature_count
+        except (json.JSONDecodeError, FileNotFoundError):
+            print(f"  Existing file corrupted, re-downloading...")
+    
+    # Get the max record count from layer metadata
+    max_record_count = get_layer_max_record_count(layer_id)
+    
     # Query all features with pagination
     url = f"{BASE_URL}/{layer_id}/query"
-    
     all_features = []
     offset = 0
-    max_record_count = 2000  # Based on service description
+    max_retries = 3
     
     while True:
         params = {
@@ -47,15 +78,39 @@ def download_geojson(layer_id, output_file):
         }
         
         print(f"  Fetching records {offset} to {offset + max_record_count}...")
-        response = requests.get(url, params=params, timeout=300)
-        response.raise_for_status()
         
-        data = response.json()
+        # Retry logic for server errors
+        data = None
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(url, params=params, timeout=300)
+                response.raise_for_status()
+                data = response.json()
+                break
+            except (requests.exceptions.HTTPError, requests.exceptions.Timeout) as e:
+                if attempt < max_retries - 1:
+                    print(f"    Retry {attempt + 1}/{max_retries} due to: {e}")
+                    import time
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                else:
+                    print(f"    Failed after {max_retries} retries, stopping this layer")
+                    break
         
-        if 'features' not in data or len(data['features']) == 0:
+        if data is None or 'features' not in data or len(data['features']) == 0:
             break
             
         all_features.extend(data['features'])
+        print(f"    Total so far: {len(all_features)} features")
+        
+        # Save progress every 10k features in case of interruption
+        if len(all_features) % 10000 < max_record_count:
+            temp_geojson = {
+                "type": "FeatureCollection",
+                "features": all_features
+            }
+            temp_file = str(output_file) + '.tmp'
+            with open(temp_file, 'w') as f:
+                json.dump(temp_geojson, f)
         
         # Check if we got all records
         if len(data['features']) < max_record_count:
@@ -74,6 +129,11 @@ def download_geojson(layer_id, output_file):
     # Save to file
     with open(output_file, 'w') as f:
         json.dump(geojson, f)
+    
+    # Remove temp file if it exists
+    temp_file = str(output_file) + '.tmp'
+    if Path(temp_file).exists():
+        Path(temp_file).unlink()
     
     print(f"  Saved to {output_file}")
     return len(all_features)
