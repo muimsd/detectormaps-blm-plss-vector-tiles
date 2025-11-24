@@ -23,7 +23,16 @@ resource "aws_cloudfront_response_headers_policy" "cors_policy" {
   }
 }
 
-# CloudFront distribution for caching tiles from ALB
+# CloudFront Origin Access Control for S3
+resource "aws_cloudfront_origin_access_control" "tiles" {
+  name                              = "${var.project_name}-oac"
+  description                       = "OAC for BLM PLSS tiles S3 bucket"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+# CloudFront distribution for caching tiles from S3
 resource "aws_cloudfront_distribution" "tiles" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -31,30 +40,20 @@ resource "aws_cloudfront_distribution" "tiles" {
   price_class         = "PriceClass_100"  # US, Canada, Europe
 
   origin {
-    domain_name = aws_lb.tileserver.dns_name
-    origin_id   = "alb-tileserver"
-
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
-
-    custom_header {
-      name  = "X-Forwarded-Host"
-      value = aws_lb.tileserver.dns_name
-    }
+    domain_name = aws_s3_bucket.mbtiles.bucket_regional_domain_name
+    origin_id   = "s3-tiles"
+    
+    origin_access_control_id = aws_cloudfront_origin_access_control.tiles.id
   }
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD", "OPTIONS"]
-    target_origin_id = "alb-tileserver"
+    target_origin_id = "s3-tiles"
 
     forwarded_values {
       query_string = false
-      headers      = ["Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"]
+      headers      = []
 
       cookies {
         forward = "none"

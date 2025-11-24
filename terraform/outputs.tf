@@ -15,15 +15,10 @@ output "cloudfront_url" {
 
 output "tile_url_template" {
   description = "Tile URL template for use in mapping applications"
-  value       = "https://${aws_cloudfront_distribution.tiles.domain_name}/data/tiles/{z}/{x}/{y}.pbf"
+  value       = "https://${aws_cloudfront_distribution.tiles.domain_name}/tiles/{z}/{x}/{y}.pbf"
 }
 
-output "tileserver_alb_url" {
-  description = "TileServer ALB URL (direct access)"
-  value       = "http://${aws_lb.tileserver.dns_name}"
-}
-
-output "tileserver_ecr_url" {
-  description = "TileServer ECR repository URL"
-  value       = aws_ecr_repository.tileserver.repository_url
+output "ecr_repository_url" {
+  description = "ECR repository URL for downloader"
+  value       = aws_ecr_repository.downloader.repository_url
 }
