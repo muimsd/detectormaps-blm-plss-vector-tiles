@@ -121,9 +121,9 @@
 </div>
 
 <script>
-    // Tileserver URL
-    const TILESERVER_URL = 'http://blm-plss-tiles-alb-562159201.us-east-1.elb.amazonaws.com';
-    const TILES_URL = TILESERVER_URL + '/styles/blm-plss-cadastral/{z}/{x}/{y}.pbf';
+    // Tileserver URL (via CloudFront with HTTPS and caching)
+    const CLOUDFRONT_URL = 'https://d38r6gz80i2tvd.cloudfront.net';
+    const TILES_URL = CLOUDFRONT_URL + '/data/tiles/{z}/{x}/{y}.pbf';
     document.getElementById('tile-url').textContent = TILES_URL;
     
     const map = new maplibregl.Map({

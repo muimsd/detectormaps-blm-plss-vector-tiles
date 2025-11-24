@@ -3,8 +3,8 @@ resource "aws_ecs_task_definition" "tileserver" {
   family                   = "${var.project_name}-tileserver"
   requires_compatibilities = ["FARGATE"]
   network_mode            = "awsvpc"
-  cpu                     = "4096"   # 4 vCPU
-  memory                  = "30720"  # 30 GB RAM
+  cpu                     = "2048"   # 2 vCPU
+  memory                  = "8192"   # 8 GB RAM
   execution_role_arn      = aws_iam_role.ecs_task_execution.arn
   task_role_arn           = aws_iam_role.ecs_task.arn
 
@@ -128,12 +128,12 @@ resource "aws_lb_target_group" "tileserver" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    matcher             = "200"
-    path                = "/health"
+    matcher             = "200,404"
+    path                = "/"
     port                = "traffic-port"
     protocol            = "HTTP"
-    timeout             = 5
-    unhealthy_threshold = 2
+    timeout             = 10
+    unhealthy_threshold = 3
   }
 
   deregistration_delay = 30
@@ -170,6 +170,8 @@ resource "aws_ecs_service" "tileserver" {
     container_name   = "tileserver"
     container_port   = 8080
   }
+
+  health_check_grace_period_seconds = 600  # 10 minutes for MBTiles download
 
   depends_on = [aws_lb_listener.tileserver]
 }
