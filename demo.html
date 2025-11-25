@@ -120,11 +120,23 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/pmtiles@3/dist/pmtiles.js"></script>
+
 <script>
-    // Tileserver URL (via CloudFront with HTTPS and caching)
-    const CLOUDFRONT_URL = 'https://d38r6gz80i2tvd.cloudfront.net';
-    const TILES_URL = CLOUDFRONT_URL + '/data/tiles/{z}/{x}/{y}.pbf';
-    document.getElementById('tile-url').textContent = TILES_URL;
+    // PMTiles from S3
+    const S3_BUCKET = 'https://blm-plss-tiles-production-221082193991.s3.amazonaws.com';
+    const PMTILES_URLS = {
+        states: S3_BUCKET + '/layers/states.pmtiles',
+        townships: S3_BUCKET + '/layers/townships.pmtiles',
+        sections: S3_BUCKET + '/layers/sections.pmtiles',
+        intersected: S3_BUCKET + '/layers/intersected.pmtiles'
+    };
+    
+    // Protocol handler for PMTiles
+    let protocol = new pmtiles.Protocol();
+    maplibregl.addProtocol("pmtiles", protocol.tile);
+    
+    document.getElementById('tile-url').textContent = 'PMTiles from S3 (States, Townships, Sections, Intersected)';
     
     const map = new maplibregl.Map({
         container: 'map',
@@ -139,11 +151,21 @@
                     tileSize: 256,
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 },
-                'plss': {
+                'states': {
                     type: 'vector',
-                    tiles: [TILES_URL],
-                    minzoom: 0,
-                    maxzoom: 14
+                    url: 'pmtiles://' + PMTILES_URLS.states
+                },
+                'townships': {
+                    type: 'vector',
+                    url: 'pmtiles://' + PMTILES_URLS.townships
+                },
+                'sections': {
+                    type: 'vector',
+                    url: 'pmtiles://' + PMTILES_URLS.sections
+                },
+                'intersected': {
+                    type: 'vector',
+                    url: 'pmtiles://' + PMTILES_URLS.intersected
                 }
             },
             layers: [
@@ -155,8 +177,8 @@
                 {
                     'id': 'state-boundaries-fill',
                     'type': 'fill',
-                    'source': 'plss',
-                    'source-layer': 'state_boundaries',
+                    'source': 'states',
+                    'source-layer': 'states',
                     'paint': {
                         'fill-color': '#000000',
                         'fill-opacity': 0.05
@@ -165,8 +187,8 @@
                 {
                     'id': 'state-boundaries',
                     'type': 'line',
-                    'source': 'plss',
-                    'source-layer': 'state_boundaries',
+                    'source': 'states',
+                    'source-layer': 'states',
                     'paint': {
                         'line-color': '#000000',
                         'line-width': 2
@@ -175,8 +197,8 @@
                 {
                     'id': 'townships-fill',
                     'type': 'fill',
-                    'source': 'plss',
-                    'source-layer': 'plss_township',
+                    'source': 'townships',
+                    'source-layer': 'townships',
                     'minzoom': 6,
                     'paint': {
                         'fill-color': '#0066cc',
@@ -186,8 +208,8 @@
                 {
                     'id': 'townships',
                     'type': 'line',
-                    'source': 'plss',
-                    'source-layer': 'plss_township',
+                    'source': 'townships',
+                    'source-layer': 'townships',
                     'minzoom': 6,
                     'paint': {
                         'line-color': '#0066cc',
@@ -204,8 +226,8 @@
                 {
                     'id': 'sections-fill',
                     'type': 'fill',
-                    'source': 'plss',
-                    'source-layer': 'plss_section',
+                    'source': 'sections',
+                    'source-layer': 'sections',
                     'minzoom': 9,
                     'paint': {
                         'fill-color': '#00cc66',
@@ -215,8 +237,8 @@
                 {
                     'id': 'sections',
                     'type': 'line',
-                    'source': 'plss',
-                    'source-layer': 'plss_section',
+                    'source': 'sections',
+                    'source-layer': 'sections',
                     'minzoom': 9,
                     'paint': {
                         'line-color': '#00cc66',
@@ -233,8 +255,8 @@
                 {
                     'id': 'intersected-fill',
                     'type': 'fill',
-                    'source': 'plss',
-                    'source-layer': 'plss_intersected',
+                    'source': 'intersected',
+                    'source-layer': 'intersected',
                     'minzoom': 10,
                     'paint': {
                         'fill-color': '#cc6600',
@@ -244,8 +266,8 @@
                 {
                     'id': 'intersected',
                     'type': 'line',
-                    'source': 'plss',
-                    'source-layer': 'plss_intersected',
+                    'source': 'intersected',
+                    'source-layer': 'intersected',
                     'minzoom': 10,
                     'paint': {
                         'line-color': '#cc6600',
