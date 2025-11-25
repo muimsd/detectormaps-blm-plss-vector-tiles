@@ -103,7 +103,7 @@ resource "aws_ecs_task_definition" "tile_builder" {
   container_definitions = jsonencode([
     {
       name      = "tile-builder"
-      image     = "${aws_ecr_repository.tileserver.repository_url}:builder-latest"
+      image     = "221082193991.dkr.ecr.us-east-1.amazonaws.com/blm-plss-tiles-tileserver:builder-latest"
       essential = true
 
       logConfiguration = {
