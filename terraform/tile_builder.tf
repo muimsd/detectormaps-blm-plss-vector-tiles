@@ -78,7 +78,10 @@ resource "aws_iam_role_policy" "ecs_task_policy_builder" {
           "s3:PutObject",
           "s3:PutObjectAcl"
         ]
-        Resource = "arn:aws:s3:::blm-plss-tiles-production-221082193991/layers/*"
+        Resource = [
+          "arn:aws:s3:::blm-plss-tiles-production-221082193991/layers/*",
+          "arn:aws:s3:::blm-plss-tiles-production-221082193991/geojson/*"
+        ]
       }
     ]
   })
