@@ -1,14 +1,103 @@
+resource "aws_ecs_cluster" "tile_builder" {
+  name = "blm-plss-tile-builder-cluster"
+
+  tags = {
+    Name = "BLM PLSS Tile Builder"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "tile_builder" {
+  name              = "/ecs/blm-plss-tile-builder"
+  retention_in_days = 7
+}
+
+resource "aws_iam_role" "ecs_task_execution_role_builder" {
+  name = "blm-plss-tile-builder-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_builder" {
+  role       = aws_iam_role.ecs_task_execution_role_builder.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role" "ecs_task_role_builder" {
+  name = "blm-plss-tile-builder-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_task_policy_builder" {
+  name = "blm-plss-tile-builder-task-policy"
+  role = aws_iam_role.ecs_task_role_builder.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "arn:aws:s3:::blm-plss-tiles-production-221082193991/layers/*"
+      }
+    ]
+  })
+}
+
+resource "aws_security_group" "tile_builder" {
+  name        = "blm-plss-tile-builder-sg"
+  description = "Security group for tile builder tasks"
+  vpc_id      = aws_default_vpc.default.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = {
+    Name = "blm-plss-tile-builder-sg"
+  }
+}
+
 resource "aws_ecs_task_definition" "tile_builder" {
   family                   = "blm-plss-tile-builder"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "4096"  # 4 vCPU for faster processing
-  memory                   = "16384" # 16 GB RAM for large datasets
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  cpu                      = "16384"  # 16 vCPU
+  memory                   = "65536"  # 64 GB RAM
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role_builder.arn
+  task_role_arn            = aws_iam_role.ecs_task_role_builder.arn
 
   ephemeral_storage {
-    size_in_gib = 200 # Enough for source GDBs + intermediate files
+    size_in_gib = 200  # 200 GB for source + output
   }
 
   container_definitions = jsonencode([
@@ -20,7 +109,7 @@ resource "aws_ecs_task_definition" "tile_builder" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.tileserver.name
+          "awslogs-group"         = aws_cloudwatch_log_group.tile_builder.name
           "awslogs-region"        = var.aws_region
           "awslogs-stream-prefix" = "tile-builder"
         }
@@ -34,24 +123,21 @@ resource "aws_ecs_task_definition" "tile_builder" {
       ]
     }
   ])
+
+  depends_on = [aws_cloudwatch_log_group.tile_builder]
 }
 
-# CloudWatch Log Group for builder
-resource "aws_cloudwatch_log_group" "tile_builder" {
-  name              = "/ecs/blm-plss-tile-builder"
-  retention_in_days = 7
+output "tile_builder_cluster_name" {
+  description = "ECS cluster name for tile builder"
+  value       = aws_ecs_cluster.tile_builder.name
 }
 
-# Output for manual task run command
-output "run_tile_builder_command" {
-  description = "Command to run the tile builder task"
-  value       = <<-EOT
-    aws ecs run-task \
-      --cluster ${aws_ecs_cluster.tileserver.name} \
-      --launch-type FARGATE \
-      --task-definition ${aws_ecs_task_definition.tile_builder.family} \
-      --network-configuration "awsvpcConfiguration={subnets=[${aws_subnet.public_a.id},${aws_subnet.public_b.id}],securityGroups=[${aws_security_group.tileserver.id}],assignPublicIp=ENABLED}" \
-      --region ${var.aws_region} \
-      --profile detectormaps
-  EOT
+output "tile_builder_task_definition" {
+  description = "Task definition ARN for tile builder"
+  value       = aws_ecs_task_definition.tile_builder.arn
+}
+
+output "tile_builder_security_group_id" {
+  description = "Security group ID for tile builder tasks"
+  value       = aws_security_group.tile_builder.id
 }

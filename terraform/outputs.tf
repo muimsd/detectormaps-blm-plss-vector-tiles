@@ -18,7 +18,4 @@ output "tile_url_template" {
   value       = "https://${aws_cloudfront_distribution.tiles.domain_name}/tiles/{z}/{x}/{y}.pbf"
 }
 
-output "ecr_repository_url" {
-  description = "ECR repository URL for downloader"
-  value       = aws_ecr_repository.downloader.repository_url
-}
+
