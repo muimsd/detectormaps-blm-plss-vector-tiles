@@ -1,3 +1,18 @@
+# ECR Repository for tile builder image
+resource "aws_ecr_repository" "tile_builder" {
+  name                 = "blm-plss-tile-builder"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = {
+    Name = "BLM PLSS Tile Builder Repository"
+  }
+}
+
 resource "aws_ecs_cluster" "tile_builder" {
   name = "blm-plss-tile-builder-cluster"
 
@@ -69,6 +84,17 @@ resource "aws_iam_role_policy" "ecs_task_policy_builder" {
   })
 }
 
+# Default VPC resources for networking
+resource "aws_default_vpc" "default" {}
+
+resource "aws_default_subnet" "default_az1" {
+  availability_zone = "us-east-1a"
+}
+
+resource "aws_default_subnet" "default_az2" {
+  availability_zone = "us-east-1b"
+}
+
 resource "aws_security_group" "tile_builder" {
   name        = "blm-plss-tile-builder-sg"
   description = "Security group for tile builder tasks"
@@ -103,7 +129,7 @@ resource "aws_ecs_task_definition" "tile_builder" {
   container_definitions = jsonencode([
     {
       name      = "tile-builder"
-      image     = "221082193991.dkr.ecr.us-east-1.amazonaws.com/blm-plss-tiles-tileserver:builder-latest"
+      image     = "${aws_ecr_repository.tile_builder.repository_url}:latest"
       essential = true
 
       logConfiguration = {
@@ -130,6 +156,11 @@ resource "aws_ecs_task_definition" "tile_builder" {
 output "tile_builder_cluster_name" {
   description = "ECS cluster name for tile builder"
   value       = aws_ecs_cluster.tile_builder.name
+}
+
+output "tile_builder_ecr_repository" {
+  description = "ECR repository URL for tile builder image"
+  value       = aws_ecr_repository.tile_builder.repository_url
 }
 
 output "tile_builder_task_definition" {

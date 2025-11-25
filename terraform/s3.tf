@@ -1,4 +1,4 @@
-# S3 bucket for storing MBTiles
+# S3 bucket for storing tiles
 resource "aws_s3_bucket" "mbtiles" {
   bucket = "${var.project_name}-${var.environment}-${data.aws_caller_identity.current.account_id}"
 }
@@ -20,33 +20,6 @@ resource "aws_s3_bucket_versioning" "mbtiles" {
   }
 }
 
-# S3 bucket policy to allow CloudFront OAC to read objects
-resource "aws_s3_bucket_policy" "mbtiles_cloudfront" {
-  bucket = aws_s3_bucket.mbtiles.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontServicePrincipal"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudfront.amazonaws.com"
-        }
-        Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.mbtiles.arn}/*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.tiles.arn
-          }
-        }
-      }
-    ]
-  })
-}
-
-# MBTiles will be uploaded by ECS task
-# Not uploading from local to avoid long wait times
-
+# Tiles will be uploaded by ECS tile builder task
 # Data source for current AWS account
 data "aws_caller_identity" "current" {}
