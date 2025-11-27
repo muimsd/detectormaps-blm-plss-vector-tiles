@@ -123,13 +123,12 @@
 <script src="https://cdn.jsdelivr.net/npm/pmtiles@3/dist/pmtiles.js"></script>
 
 <script>
-    // PMTiles from S3
-    const S3_BUCKET = 'https://blm-plss-tiles-production-221082193991.s3.amazonaws.com';
+    // PMTiles from S3 - using relative URLs for same-origin requests
     const PMTILES_URLS = {
-        states: S3_BUCKET + '/layers/states.pmtiles',
-        townships: S3_BUCKET + '/layers/townships.pmtiles',
-        sections: S3_BUCKET + '/layers/sections.pmtiles',
-        intersected: S3_BUCKET + '/layers/intersected.pmtiles'
+        states: '/layers/states.pmtiles',
+        townships: '/layers/townships.pmtiles',
+        sections: '/layers/sections.pmtiles',
+        intersected: '/layers/intersected.pmtiles'
     };
     
     // Protocol handler for PMTiles
